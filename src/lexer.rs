@@ -26,53 +26,6 @@ impl<'i> Lexer<'i> {
     }
 }
 
-/*
-impl<'i> Stream for Lexer<'i> {
-    type Token = Spanned<Token<'i>>;
-
-    type Slice = &'i [Token<'i>];
-
-    type IterOffsets = Map<Self, fn(Self::Token) -> (usize, Self::Token)>;
-
-    fn next_token(&mut self) -> Option<Self::Token> {
-        (Token::parse.with_span(), space0)
-            // map to Spanned
-            .map(|(spanned_tok, _)| Spanned::from(spanned_tok))
-            // parse it
-            .parse_next(&mut self.remaining)
-            // return as Option
-            .ok()
-    }
-
-    fn offset_for<P>(&self, predicate: P) -> Option<usize>
-    where
-        P: Fn(Self::Token) -> bool,
-    {
-        todo!()
-    }
-
-    fn offset_at(&self, tokens: usize) -> Result<usize, winnow::error::Needed> {
-        todo!()
-    }
-
-    fn next_slice(&mut self, offset: usize) -> Self::Slice {
-        todo!()
-    }
-
-    fn checkpoint(&self) -> Self::Checkpoint {
-        todo!()
-    }
-
-    fn reset(&mut self, checkpoint: &Self::Checkpoint) {
-        todo!()
-    }
-
-    fn raw(&self) -> &dyn std::fmt::Debug {
-        unimplemented!("Lexer does not have an inner stream");
-    }
-}
-*/
-
 impl<'i> Iterator for Lexer<'i> {
     type Item = Spanned<Token<'i>>;
 
