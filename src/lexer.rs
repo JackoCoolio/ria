@@ -141,6 +141,24 @@ where
     take_indent().recognize().parse_next(input)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Symbol {
+    Lambda,
+    Arrow,
+    Define,
+}
+
+impl Symbol {
+    /// Parses a [Symbol].
+    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream + Compare<&'static str> + StreamIsPartial,
+    {
+        use Symbol::*;
+        alt(("\\".value(Lambda), "->".value(Arrow), "=".value(Define))).parse_next(input)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::assert_matches::assert_matches;
@@ -206,23 +224,5 @@ mod test {
 
         // define
         assert_matches!(Symbol::parse.parse_peek("="), Ok((_, Symbol::Define)));
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Symbol {
-    Lambda,
-    Arrow,
-    Define,
-}
-
-impl Symbol {
-    /// Parses a [Symbol].
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream + Compare<&'static str> + StreamIsPartial,
-    {
-        use Symbol::*;
-        alt(("\\".value(Lambda), "->".value(Arrow), "=".value(Define))).parse_next(input)
     }
 }
