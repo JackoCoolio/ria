@@ -1,5 +1,5 @@
 #![feature(assert_matches)]
-#![allow(unused)]
+#![allow(dead_code)]
 
 mod lexer;
 mod parser;
