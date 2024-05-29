@@ -150,7 +150,7 @@ mod test {
     use crate::lexer::{parse_ident, Lexer, Symbol, Token};
 
     #[test]
-    fn test_lexer() {
+    fn lex_tokens() {
         let input = "identity = \\x -> x";
         let mut lexer = Lexer::new(input);
 
@@ -164,7 +164,7 @@ mod test {
     }
 
     #[test]
-    fn test_parse_ident() {
+    fn parse_idents() {
         fn fails(s: &str) {
             assert!(parse_ident.parse_peek(s).is_err());
         }
@@ -197,7 +197,7 @@ mod test {
     }
 
     #[test]
-    fn test_parse_symbol() {
+    fn parse_symbols() {
         // lambda
         assert_matches!(Symbol::parse.parse_peek("\\"), Ok((_, Symbol::Lambda)));
 
