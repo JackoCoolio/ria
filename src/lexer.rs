@@ -1,8 +1,8 @@
-use std::{assert_matches::assert_matches, borrow::Borrow, iter::Map, ops::Range};
+use std::{borrow::Borrow, ops::Range};
 
 use winnow::{
     ascii::space0,
-    combinator::{alt, Span, WithSpan},
+    combinator::alt,
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::take_while,
     Located, PResult, Parser,
@@ -17,7 +17,7 @@ pub struct Lexer<'i> {
 impl<'i> Lexer<'i> {
     pub fn new(mut input: &'i str) -> Self {
         // parse any leading spaces
-        space0::<_, ()>.parse_next(&mut input);
+        let _ = space0::<_, ()>.parse_next(&mut input);
 
         Self {
             remaining: Located::new(input),
@@ -155,37 +155,58 @@ where
     take_indent().recognize().parse_next(input)
 }
 
-#[test]
-fn test_parse_ident() {
-    fn fails(s: &str) {
-        assert!(parse_ident.parse_peek(s).is_err());
+#[cfg(test)]
+mod test {
+    use std::assert_matches::assert_matches;
+
+    use winnow::Parser;
+
+    use crate::lexer::{parse_ident, Symbol};
+
+    #[test]
+    fn test_parse_ident() {
+        fn fails(s: &str) {
+            assert!(parse_ident.parse_peek(s).is_err());
+        }
+
+        // empty fails
+        fails("");
+
+        // digit fails
+        fails("1");
+
+        // starts with digit fails
+        fails("1a");
+
+        fn works(s: &str) {
+            assert_eq!(parse_ident.parse_peek(s), Ok(("", s)));
+        }
+
+        // just underscore is Ok
+        works("_");
+
+        // starts with underscore is Ok
+        works("_a");
+        works("_1");
+
+        // starts with alpha is Ok
+        works("foo");
+
+        // contains underscore is Ok
+        works("foo_bar");
     }
 
-    // empty fails
-    fails("");
+    #[test]
+    fn test_parse_symbol() {
+        // lambda
+        assert_matches!(Symbol::parse.parse_peek("\\"), Ok((_, Symbol::Lambda)));
 
-    // digit fails
-    fails("1");
+        // arrow
+        assert_matches!(Symbol::parse.parse_peek("->"), Ok((_, Symbol::Arrow)));
 
-    // starts with digit fails
-    fails("1a");
-
-    fn works(s: &str) {
-        assert_eq!(parse_ident.parse_peek(s), Ok(("", s)));
+        // define
+        assert_matches!(Symbol::parse.parse_peek("="), Ok((_, Symbol::Define)));
     }
-
-    // just underscore is Ok
-    works("_");
-
-    // starts with underscore is Ok
-    works("_a");
-    works("_1");
-
-    // starts with alpha is Ok
-    works("foo");
-
-    // contains underscore is Ok
-    works("foo_bar");
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -204,16 +225,4 @@ impl Symbol {
         use Symbol::*;
         alt(("\\".value(Lambda), "->".value(Arrow), "=".value(Define))).parse_next(input)
     }
-}
-
-#[test]
-fn test_parse_symbol() {
-    // lambda
-    assert_matches!(Symbol::parse.parse_peek("\\"), Ok((_, Symbol::Lambda)));
-
-    // arrow
-    assert_matches!(Symbol::parse.parse_peek("->"), Ok((_, Symbol::Arrow)));
-
-    // define
-    assert_matches!(Symbol::parse.parse_peek("="), Ok((_, Symbol::Define)));
 }
