@@ -1,6 +1,6 @@
 use winnow::{combinator::repeat, stream::Stream, PResult, Parser};
 
-use crate::lexer::{Lexer, Spanned, Symbol, Token};
+use crate::lexer::{Spanned, Symbol, Token};
 
 use super::{expr::Expr, ident, symbol};
 
@@ -38,14 +38,24 @@ impl<'i> Def<'i> {
     }
 }
 
-#[test]
-fn parse_simple_def() {
-    let input = "x = y";
-    let lexer = Lexer::new(input);
-    let tokens: Box<[Spanned<Token>]> = lexer.collect();
+#[cfg(test)]
+mod test {
+    use winnow::Parser;
 
-    let def = Def::parse.parse(tokens.as_ref()).unwrap();
+    use crate::{
+        lexer::{Lexer, Spanned, Token},
+        parser::{def::Def, expr::Expr},
+    };
 
-    assert_eq!(def.ident.inner(), "x");
-    assert!(matches!(def.expr, Expr::Variable(Spanned("y", _))));
+    #[test]
+    fn parse_simple_def() {
+        let input = "x = y";
+        let lexer = Lexer::new(input);
+        let tokens: Box<[Spanned<Token>]> = lexer.collect();
+
+        let def = Def::parse.parse(tokens.as_ref()).unwrap();
+
+        assert_eq!(def.ident.inner(), "x");
+        assert!(matches!(def.expr, Expr::Variable(Spanned("y", _))));
+    }
 }
