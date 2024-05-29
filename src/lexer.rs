@@ -40,20 +40,6 @@ impl<'i> Iterator for Lexer<'i> {
     }
 }
 
-#[test]
-fn test_lexer() {
-    let input = "identity = \\x -> x";
-    let mut lexer = Lexer::new(input);
-
-    assert_eq!(lexer.next().unwrap().inner(), Token::Ident("identity"));
-    assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Define));
-    assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Lambda));
-    assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
-    assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Arrow));
-    assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
-    assert!(lexer.next().is_none()); // empty now
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Spanned<T>(pub T, pub Range<usize>);
 
@@ -161,7 +147,21 @@ mod test {
 
     use winnow::Parser;
 
-    use crate::lexer::{parse_ident, Symbol};
+    use crate::lexer::{parse_ident, Lexer, Symbol, Token};
+
+    #[test]
+    fn test_lexer() {
+        let input = "identity = \\x -> x";
+        let mut lexer = Lexer::new(input);
+
+        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("identity"));
+        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Define));
+        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Lambda));
+        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
+        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Arrow));
+        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
+        assert!(lexer.next().is_none()); // empty now
+    }
 
     #[test]
     fn test_parse_ident() {
