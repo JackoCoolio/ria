@@ -9,6 +9,7 @@ use crate::lexer::{Lexer, Spanned, Symbol, Token};
 
 use self::expr::Expr;
 
+mod def;
 mod expr;
 
 struct Module<'i> {
