@@ -4,7 +4,7 @@ use winnow::{
     PResult, Parser,
 };
 
-use crate::lexer::{Lexer, Spanned, Symbol, Token};
+use crate::lexer::{Spanned, Symbol, Token};
 
 use super::{ident, symbol};
 
@@ -48,36 +48,46 @@ impl<'i> Expr<'i> {
     }
 }
 
-#[test]
-fn parse_arity_1_lambda() {
-    let tokens: Box<[Spanned<Token>]> = Lexer::new("\\x -> x").collect();
-    let expr = Expr::parse
-        .parse(tokens.as_ref())
-        .expect("simple lambda expr should parse");
-    assert_eq!(
-        expr,
-        Expr::Lambda(Lambda {
-            param: Spanned::new("x", 1..2),
-            body: Box::new(Expr::Variable(Spanned::new("x", 6..7)))
-        })
-    );
-}
+#[cfg(test)]
+mod test {
+    use winnow::Parser;
 
-#[test]
-fn parse_arity_2_lambda() {
-    let tokens: Box<_> = Lexer::new("\\x -> \\y -> z").collect();
-    let expr = Expr::parse
-        .parse(tokens.as_ref())
-        .expect("arity 2 lambda expr should parse");
+    use crate::{
+        lexer::{Lexer, Spanned, Token},
+        parser::expr::{Expr, Lambda},
+    };
 
-    assert_eq!(
-        expr,
-        Expr::Lambda(Lambda {
-            param: Spanned::new("x", 1..2),
-            body: Box::new(Expr::Lambda(Lambda {
-                param: Spanned::new("y", 7..8),
-                body: Box::new(Expr::Variable(Spanned::new("z", 12..13))),
-            })),
-        }),
-    );
+    #[test]
+    fn parse_arity_1_lambda() {
+        let tokens: Box<[Spanned<Token>]> = Lexer::new("\\x -> x").collect();
+        let expr = Expr::parse
+            .parse(tokens.as_ref())
+            .expect("simple lambda expr should parse");
+        assert_eq!(
+            expr,
+            Expr::Lambda(Lambda {
+                param: Spanned::new("x", 1..2),
+                body: Box::new(Expr::Variable(Spanned::new("x", 6..7)))
+            })
+        );
+    }
+
+    #[test]
+    fn parse_arity_2_lambda() {
+        let tokens: Box<_> = Lexer::new("\\x -> \\y -> z").collect();
+        let expr = Expr::parse
+            .parse(tokens.as_ref())
+            .expect("arity 2 lambda expr should parse");
+
+        assert_eq!(
+            expr,
+            Expr::Lambda(Lambda {
+                param: Spanned::new("x", 1..2),
+                body: Box::new(Expr::Lambda(Lambda {
+                    param: Spanned::new("y", 7..8),
+                    body: Box::new(Expr::Variable(Spanned::new("z", 12..13))),
+                })),
+            }),
+        );
+    }
 }
