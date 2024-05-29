@@ -1,5 +1,5 @@
 use winnow::{
-    combinator::alt,
+    combinator::{alt, cut_err},
     error::{AddContext, ContextError, ErrMode, InputError},
     stream::{Location, Stream},
     PResult, Parser,
@@ -73,11 +73,19 @@ fn parse_simple_def() {
     let def = Def::parse.parse(tokens.as_ref()).unwrap();
 
     assert_eq!(def.ident.inner(), "x");
-    assert!(matches!(def.expr, Expr::Variable("y")));
+    assert!(matches!(def.expr, Expr::Variable(Spanned("y", _))));
 }
 
+#[derive(Debug, PartialEq, Eq)]
 enum Expr<'i> {
-    Variable(&'i str),
+    Variable(Spanned<&'i str>),
+    Lambda(Lambda<'i>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct Lambda<'i> {
+    param: Spanned<&'i str>,
+    body: Box<Expr<'i>>,
 }
 
 impl<'i> Expr<'i> {
@@ -85,13 +93,59 @@ impl<'i> Expr<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let Some(token) = input.next_token() else {
-            return Err(ErrMode::Backtrack(ContextError::new()));
-        };
+        alt((
+            ident.map(Expr::Variable),
+            Expr::parse_lambda.map(Expr::Lambda),
+        ))
+        .parse_next(input)
+    }
 
-        Ok(match token.inner() {
-            Token::Ident(ident) => Expr::Variable(ident),
-            _ => return Err(ErrMode::Backtrack(ContextError::new())),
+    /// Parses a [Lambda].
+    fn parse_lambda<S>(input: &mut S) -> PResult<Lambda<'i>>
+    where
+        S: Stream<Token = Spanned<Token<'i>>>,
+    {
+        let _ = symbol(&Symbol::Lambda).parse_next(input)?;
+        let param = cut_err(ident).parse_next(input)?;
+        let _ = symbol(&Symbol::Arrow).parse_next(input)?;
+        let body = Expr::parse.parse_next(input)?;
+        Ok(Lambda {
+            param,
+            body: Box::new(body),
         })
     }
+}
+
+#[test]
+fn parse_arity_1_lambda() {
+    let tokens: Box<[Spanned<Token>]> = Lexer::new("\\x -> x").collect();
+    let expr = Expr::parse
+        .parse(tokens.as_ref())
+        .expect("simple lambda expr should parse");
+    assert_eq!(
+        expr,
+        Expr::Lambda(Lambda {
+            param: Spanned::new("x", 1..2),
+            body: Box::new(Expr::Variable(Spanned::new("x", 6..7)))
+        })
+    );
+}
+
+#[test]
+fn parse_arity_2_lambda() {
+    let tokens: Box<_> = Lexer::new("\\x -> \\y -> z").collect();
+    let expr = Expr::parse
+        .parse(tokens.as_ref())
+        .expect("arity 2 lambda expr should parse");
+
+    assert_eq!(
+        expr,
+        Expr::Lambda(Lambda {
+            param: Spanned::new("x", 1..2),
+            body: Box::new(Expr::Lambda(Lambda {
+                param: Spanned::new("y", 7..8),
+                body: Box::new(Expr::Variable(Spanned::new("z", 12..13))),
+            })),
+        }),
+    );
 }
