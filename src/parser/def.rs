@@ -1,11 +1,23 @@
-use winnow::{stream::Stream, PResult, Parser};
+use winnow::{combinator::repeat, stream::Stream, PResult, Parser};
 
 use crate::lexer::{Lexer, Spanned, Symbol, Token};
 
 use super::{expr::Expr, ident, symbol};
 
-struct Module<'i> {
+struct DefList<'i> {
     defs: Box<[Def<'i>]>,
+}
+
+impl<'i> DefList<'i> {
+    pub fn parse<S>(input: &mut S) -> PResult<DefList<'i>>
+    where
+        S: Stream<Token = Spanned<Token<'i>>>,
+    {
+        let defs: Vec<_> = repeat(0.., Def::parse).parse_next(input)?;
+        Ok(DefList {
+            defs: defs.into_boxed_slice(),
+        })
+    }
 }
 
 pub struct Def<'i> {
