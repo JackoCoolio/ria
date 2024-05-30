@@ -1,6 +1,5 @@
+use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{combinator::repeat, stream::Stream, PResult, Parser};
-
-use crate::lexer::{Spanned, Symbol, Token};
 
 use super::{expr::Expr, ident, symbol};
 
@@ -40,12 +39,10 @@ impl<'i> Def<'i> {
 
 #[cfg(test)]
 mod test {
+    use ria_lexer::{Lexer, Spanned, Token};
     use winnow::Parser;
 
-    use crate::{
-        lexer::{Lexer, Spanned, Token},
-        parser::{def::Def, expr::Expr},
-    };
+    use crate::{def::Def, expr::Expr};
 
     #[test]
     fn parse_simple_def() {

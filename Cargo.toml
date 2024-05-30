@@ -1,7 +1,5 @@
-[package]
-name = "ria"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-winnow = "0.6.8"
+[workspace]
+members = [
+    "crates/*"
+]
+resolver = "2"

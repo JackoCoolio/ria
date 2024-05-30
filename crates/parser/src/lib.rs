@@ -1,10 +1,11 @@
+#![allow(dead_code)]
+
+use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
     error::{ContextError, ErrMode},
     stream::Stream,
     PResult, Parser,
 };
-
-use crate::lexer::{Spanned, Symbol, Token};
 
 mod def;
 mod expr;

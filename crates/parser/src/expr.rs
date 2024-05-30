@@ -1,10 +1,9 @@
+use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
     combinator::{alt, cut_err},
     stream::Stream,
     PResult, Parser,
 };
-
-use crate::lexer::{Spanned, Symbol, Token};
 
 use super::{ident, symbol};
 
@@ -50,12 +49,10 @@ impl<'i> Expr<'i> {
 
 #[cfg(test)]
 mod test {
+    use ria_lexer::{Lexer, Spanned, Token};
     use winnow::Parser;
 
-    use crate::{
-        lexer::{Lexer, Spanned, Token},
-        parser::expr::{Expr, Lambda},
-    };
+    use crate::expr::{Expr, Lambda};
 
     #[test]
     fn parse_arity_1_lambda() {
