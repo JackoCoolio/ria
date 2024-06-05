@@ -5,7 +5,7 @@ use std::{borrow::Borrow, ops::Range};
 use winnow::{
     ascii::space0,
     combinator::alt,
-    stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
+    stream::{AsBStr, AsChar, Compare, Location, Stream, StreamIsPartial},
     token::take_while,
     Located, PResult, Parser,
 };
@@ -73,6 +73,14 @@ impl<T> Spanned<T> {
     pub fn map<U>(self, func: impl FnOnce(T) -> U) -> Spanned<U> {
         let Spanned(token, range) = self;
         Spanned(func(token), range)
+    }
+
+    pub fn start(&self) -> usize {
+        self.1.start
+    }
+
+    pub fn end(&self) -> usize {
+        self.1.end
     }
 }
 
