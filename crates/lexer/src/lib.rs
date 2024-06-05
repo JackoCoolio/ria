@@ -1,3 +1,4 @@
+#![feature(assert_matches)]
 #![allow(dead_code)]
 
 use std::{borrow::Borrow, ops::Range};
@@ -5,7 +6,7 @@ use std::{borrow::Borrow, ops::Range};
 use winnow::{
     ascii::space0,
     combinator::alt,
-    stream::{AsBStr, AsChar, Compare, Location, Stream, StreamIsPartial},
+    stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::take_while,
     Located, PResult, Parser,
 };
@@ -176,7 +177,7 @@ mod test {
 
     use winnow::Parser;
 
-    use crate::lexer::{parse_ident, Lexer, Symbol, Token};
+    use super::{parse_ident, Lexer, Symbol, Token};
 
     #[test]
     fn lex_tokens() {
