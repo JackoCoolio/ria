@@ -7,8 +7,8 @@ use winnow::{
     PResult, Parser,
 };
 
-mod def;
-mod expr;
+pub mod def;
+pub mod expr;
 
 fn ident<'i, S>(input: &mut S) -> PResult<Spanned<&'i str>>
 where
