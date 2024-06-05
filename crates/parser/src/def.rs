@@ -1,5 +1,7 @@
 use ria_lexer::{Spanned, Symbol, Token};
-use winnow::{combinator::repeat, stream::Stream, PResult, Parser};
+use winnow::{combinator::separated, stream::Stream, PResult, Parser};
+
+use crate::newline;
 
 use super::{expr::Expr, ident, symbol};
 
@@ -12,7 +14,7 @@ impl<'i> DefList<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let defs: Vec<_> = repeat(0.., Def::parse).parse_next(input)?;
+        let defs: Vec<_> = separated(1.., Def::parse, newline).parse_next(input)?;
         Ok(DefList {
             defs: defs.into_boxed_slice(),
         })
@@ -44,6 +46,15 @@ mod test {
 
     use crate::{def::Def, expr::Expr};
 
+    use super::DefList;
+
+    macro_rules! assert_def_eq {
+        ($def:expr, $ident:literal = $pat:pat) => {{
+            assert_eq!(*$def.ident.inner(), $ident);
+            assert!(matches!($def.expr, $pat));
+        }};
+    }
+
     #[test]
     fn parse_simple_def() {
         let input = "x = y";
@@ -52,7 +63,18 @@ mod test {
 
         let def = Def::parse.parse(tokens.as_ref()).unwrap();
 
-        assert_eq!(def.ident.inner(), "x");
-        assert!(matches!(def.expr, Expr::Variable(Spanned("y", _))));
+        assert_def_eq!(def, "x" = Expr::Variable(Spanned("y", _)));
+    }
+
+    #[test]
+    fn parse_def_list() {
+        let input = "x = y\ny = z";
+        let lexer = Lexer::new(input);
+        let tokens: Box<[Spanned<Token>]> = lexer.collect();
+
+        let def_list = DefList::parse.parse(tokens.as_ref()).unwrap();
+
+        assert_def_eq!(&def_list.defs[0], "x" = Expr::Variable(Spanned("y", _)));
+        assert_def_eq!(&def_list.defs[1], "y" = Expr::Variable(Spanned("z", _)));
     }
 }
