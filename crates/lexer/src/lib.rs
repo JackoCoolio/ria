@@ -58,6 +58,7 @@ impl<T> Spanned<T> {
     }
 
     /// Returns the length of the Spanned token.
+    #[allow(clippy::len_without_is_empty)] // never empty
     pub fn len(&self) -> usize {
         let Spanned(_, range) = self;
         range.len()
