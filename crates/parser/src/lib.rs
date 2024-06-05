@@ -44,3 +44,13 @@ where
         _ => Err(ErrMode::Backtrack(ContextError::new())),
     }
 }
+
+fn newline<'i, S>(input: &mut S) -> PResult<Spanned<()>>
+where
+    S: Stream<Token = Spanned<Token<'i>>>,
+{
+    match input.next_token() {
+        Some(Spanned(Token::NewLine, span)) => Ok(Spanned::new((), span)),
+        _ => Err(ErrMode::Backtrack(ContextError::new())),
+    }
+}

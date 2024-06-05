@@ -4,17 +4,17 @@
 use std::{borrow::Borrow, ops::Range};
 
 use winnow::{
-    ascii::space0,
-    combinator::alt,
+    ascii::{newline, space0},
+    combinator::{alt, opt},
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
-    token::take_while,
+    token::{one_of, take_while},
     Located, PResult, Parser,
 };
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'i> {
     remaining: Located<&'i str>,
-    position: usize,
+    last_was_newline: bool,
 }
 
 impl<'i> Lexer<'i> {
@@ -24,7 +24,8 @@ impl<'i> Lexer<'i> {
 
         Self {
             remaining: Located::new(input),
-            position: 0,
+            // there might have been a leading newline, but we don't really care
+            last_was_newline: false,
         }
     }
 }
@@ -33,13 +34,23 @@ impl<'i> Iterator for Lexer<'i> {
     type Item = Spanned<Token<'i>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        (Token::parse.with_span(), space0)
-            // map to Spanned
-            .map(|(spanned_tok, _)| Spanned::from(spanned_tok))
-            // parse it
+        let ((token, span), _) = (Token::parse.with_span(), opt(one_of((' ', '\t', '\r'))))
             .parse_next(&mut self.remaining)
-            // return as Option
-            .ok()
+            .ok()?;
+
+        // we return the first occurrence of a newline, then subsequent
+        // occurrences are skipped
+        if let Token::NewLine = token {
+            if self.last_was_newline {
+                return self.next();
+            } else {
+                self.last_was_newline = true;
+            }
+        } else {
+            self.last_was_newline = false;
+        }
+
+        Some(Spanned::from((token, span)))
     }
 }
 
@@ -65,9 +76,9 @@ impl<T> Spanned<T> {
         range.len()
     }
 
-    /// Unwraps the Spanned token to return the inner token.
-    pub fn inner(self) -> T {
-        self.0
+    /// Returns a reference to the inner token.
+    pub fn inner(&self) -> &T {
+        &self.0
     }
 
     /// Maps the inner token with `func`.
@@ -99,6 +110,7 @@ impl<T> From<(T, Range<usize>)> for Spanned<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'i> {
+    NewLine,
     Symbol(Symbol),
     Ident(&'i str),
 }
@@ -118,12 +130,23 @@ impl<'i> Token<'i> {
         parse_ident.map(Token::Ident).parse_next(input)
     }
 
+    fn parse_newline<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<char>,
+    {
+        // lines can be separated with '\n' or ';'
+        alt((newline, ';')).value(Self::NewLine).parse_next(input)
+    }
+
     /// Parse a token.
     pub fn parse<S>(input: &mut S) -> PResult<Self>
     where
-        S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<&'static str>,
+        S: Stream<Token = char, Slice = &'i str>
+            + StreamIsPartial
+            + Compare<&'static str>
+            + Compare<char>,
     {
-        alt((Self::parse_kw, Self::parse_ident)).parse_next(input)
+        alt((Self::parse_kw, Self::parse_ident, Self::parse_newline)).parse_next(input)
     }
 }
 
@@ -184,12 +207,18 @@ mod test {
         let input = "identity = \\x -> x";
         let mut lexer = Lexer::new(input);
 
-        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("identity"));
-        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Define));
-        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Lambda));
-        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
-        assert_eq!(lexer.next().unwrap().inner(), Token::Symbol(Symbol::Arrow));
-        assert_eq!(lexer.next().unwrap().inner(), Token::Ident("x"));
+        assert_eq!(lexer.next().unwrap().inner(), &Token::Ident("identity"));
+        assert_eq!(
+            lexer.next().unwrap().inner(),
+            &Token::Symbol(Symbol::Define)
+        );
+        assert_eq!(
+            lexer.next().unwrap().inner(),
+            &Token::Symbol(Symbol::Lambda)
+        );
+        assert_eq!(lexer.next().unwrap().inner(), &Token::Ident("x"));
+        assert_eq!(lexer.next().unwrap().inner(), &Token::Symbol(Symbol::Arrow));
+        assert_eq!(lexer.next().unwrap().inner(), &Token::Ident("x"));
         assert!(lexer.next().is_none()); // empty now
     }
 
