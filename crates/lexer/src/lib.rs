@@ -158,7 +158,7 @@ fn is_ident_rest(c: char) -> bool {
     is_ident_first(c) || c.is_dec_digit()
 }
 
-fn take_indent<S>() -> impl FnMut(&mut S) -> PResult<()>
+fn take_ident<S>() -> impl FnMut(&mut S) -> PResult<()>
 where
     S: Stream<Token = char> + StreamIsPartial,
 {
@@ -173,7 +173,7 @@ fn parse_ident<'i, S>(input: &mut S) -> PResult<&'i str>
 where
     S: Stream<Token = char, Slice = &'i str> + StreamIsPartial,
 {
-    take_indent().recognize().parse_next(input)
+    take_ident().recognize().parse_next(input)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
