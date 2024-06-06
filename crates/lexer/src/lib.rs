@@ -204,6 +204,8 @@ symbols! {
     "\\" => Lambda,
     "->" => Arrow,
     "="  => Define,
+    "("  => OpenParen,
+    ")"  => CloseParen
 }
 
 #[cfg(test)]
