@@ -176,22 +176,34 @@ where
     take_ident().recognize().parse_next(input)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Symbol {
-    Lambda,
-    Arrow,
-    Define,
+macro_rules! symbols {
+    ($str:literal => $sym:ident $(, $strs:literal => $syms:ident)*) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+        pub enum Symbol {
+            $sym
+            $(, $syms)*
+        }
+
+        impl Symbol {
+            pub fn parse<S>(input: &mut S) -> PResult<Self>
+            where
+                S: Stream + Compare<&'static str> + StreamIsPartial,
+            {
+                use Symbol::*;
+
+                winnow::combinator::alt((
+                    $str.value($sym)
+                    $(, $strs.value($syms))*
+                )).parse_next(input)
+            }
+        }
+    };
 }
 
-impl Symbol {
-    /// Parses a [Symbol].
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream + Compare<&'static str> + StreamIsPartial,
-    {
-        use Symbol::*;
-        alt(("\\".value(Lambda), "->".value(Arrow), "=".value(Define))).parse_next(input)
-    }
+symbols! {
+    "\\" => Lambda,
+    "->" => Arrow,
+    "="  => Define,
 }
 
 #[cfg(test)]
