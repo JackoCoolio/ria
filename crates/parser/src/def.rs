@@ -5,8 +5,9 @@ use crate::newline;
 
 use super::{expr::Expr, ident, symbol};
 
-struct DefList<'i> {
-    defs: Box<[Def<'i>]>,
+#[derive(Debug, PartialEq, Eq)]
+pub struct DefList<'i> {
+    pub defs: Box<[Def<'i>]>,
 }
 
 impl<'i> DefList<'i> {
@@ -21,9 +22,10 @@ impl<'i> DefList<'i> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct Def<'i> {
-    ident: Spanned<&'i str>,
-    expr: Expr<'i>,
+    pub ident: Spanned<&'i str>,
+    pub expr: Expr<'i>,
 }
 
 impl<'i> Def<'i> {

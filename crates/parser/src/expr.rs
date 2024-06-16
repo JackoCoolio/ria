@@ -1,9 +1,11 @@
 use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
-    combinator::{alt, cut_err},
+    combinator::{alt, cut_err, delimited, opt, preceded},
     stream::Stream,
     PResult, Parser,
 };
+
+use crate::{def::DefList, newline};
 
 use super::{ident, symbol};
 
@@ -11,12 +13,40 @@ use super::{ident, symbol};
 pub enum Expr<'i> {
     Variable(Spanned<&'i str>),
     Lambda(Lambda<'i>),
+    Block(Block<'i>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Lambda<'i> {
     param: Spanned<&'i str>,
     body: Box<Expr<'i>>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Block<'i> {
+    defs: DefList<'i>,
+    expr: Option<Box<Expr<'i>>>,
+}
+
+impl<'i> Block<'i> {
+    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream<Token = Spanned<Token<'i>>>,
+    {
+        delimited(
+            symbol(&Symbol::OpenParen),
+            |input: &mut S| {
+                let defs = DefList::parse.parse_next(input)?;
+                let expr = opt(preceded(newline, Expr::parse))
+                    .map(|expr| expr.map(Box::from))
+                    .parse_next(input)?;
+
+                Ok(Block { defs, expr })
+            },
+            symbol(&Symbol::CloseParen),
+        )
+        .parse_next(input)
+    }
 }
 
 impl<'i> Expr<'i> {
@@ -27,6 +57,7 @@ impl<'i> Expr<'i> {
         alt((
             ident.map(Expr::Variable),
             Expr::parse_lambda.map(Expr::Lambda),
+            Block::parse.map(Expr::Block),
         ))
         .parse_next(input)
     }
@@ -52,7 +83,10 @@ mod test {
     use ria_lexer::{Lexer, Spanned, Token};
     use winnow::Parser;
 
-    use crate::expr::{Expr, Lambda};
+    use crate::{
+        def::{Def, DefList},
+        expr::{Block, Expr, Lambda},
+    };
 
     #[test]
     fn parse_arity_1_lambda() {
@@ -84,6 +118,28 @@ mod test {
                     param: Spanned::new("y", 7..8),
                     body: Box::new(Expr::Variable(Spanned::new("z", 12..13))),
                 })),
+            }),
+        );
+    }
+
+    #[test]
+    fn parse_block() {
+        let tokens: Box<_> = Lexer::new("(x = y; x)").collect();
+        let expr = Expr::parse
+            .parse(tokens.as_ref())
+            .expect("block should parse");
+
+        assert_eq!(
+            expr,
+            Expr::Block(Block {
+                defs: DefList {
+                    defs: [Def {
+                        ident: Spanned("x", 1..2),
+                        expr: Expr::Variable(Spanned("y", 5..6)),
+                    }]
+                    .into(),
+                },
+                expr: Some(Expr::Variable(Spanned("x", 8..9)).into()),
             }),
         );
     }
