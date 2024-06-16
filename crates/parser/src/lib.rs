@@ -2,7 +2,8 @@
 
 use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
-    error::{ContextError, ErrMode},
+    combinator::Context,
+    error::{ContextError, ErrMode, StrContext},
     stream::Stream,
     PResult, Parser,
 };
@@ -33,16 +34,25 @@ where
 }
 
 /// Parses the given symbol.
-fn symbol<'sym, 'i, S>(symbol: &'sym Symbol) -> impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym
+fn symbol<'sym, 'i, S>(
+    symbol: &'sym Symbol,
+) -> Context<
+    impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym,
+    S,
+    Spanned<()>,
+    ContextError,
+    StrContext,
+>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
-    move |input: &mut S| match input.next_token() {
+    (move |input: &mut S| match input.next_token() {
         Some(Spanned(Token::Symbol(ref the_symbol), span)) if the_symbol == symbol => {
             Ok(Spanned::new((), span))
         }
         _ => Err(ErrMode::Backtrack(ContextError::new())),
-    }
+    })
+    .context(StrContext::Expected(symbol.str_context_value()))
 }
 
 fn newline<'i, S>(input: &mut S) -> PResult<Spanned<()>>
