@@ -2,8 +2,7 @@
 
 use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
-    combinator::Context,
-    error::{ContextError, ErrMode, StrContext},
+    error::{ContextError, ErrMode, StrContext, StrContextValue},
     stream::Stream,
     PResult, Parser,
 };
@@ -11,56 +10,77 @@ use winnow::{
 pub mod def;
 pub mod expr;
 
+/// Parses any token.
+fn token<'i, S>(input: &mut S) -> PResult<Spanned<Token<'i>>>
+where
+    S: Stream<Token = Spanned<Token<'i>>>,
+{
+    input
+        .next_token()
+        .ok_or(ErrMode::Backtrack(ContextError::new()))
+}
+
+/// Parses any identifier.
 fn ident<'i, S>(input: &mut S) -> PResult<Spanned<&'i str>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
-    match input.next_token() {
-        Some(Spanned(Token::Ident(ident_str), span)) => Ok(Spanned::new(ident_str, span)),
-        _ => Err(ErrMode::Backtrack(ContextError::new())),
-    }
+    token
+        .verify_map(|Spanned(tok, span)| match tok {
+            Token::Ident(ident) => Some(Spanned::new(ident, span)),
+            _ => None,
+        })
+        .context(StrContext::Expected(StrContextValue::Description(
+            "an identifier",
+        )))
+        .parse_next(input)
 }
 
-/// Parse a keyword.
-fn keyword<'i, 'kw, S>(kw: &'kw str) -> impl FnMut(&mut S) -> PResult<Spanned<&'i str>> + 'kw
+/// Parse the given keyword.
+fn keyword<'i, S>(kw: &'static str) -> impl FnMut(&mut S) -> PResult<Spanned<()>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
     move |input: &mut S| {
         ident
-            .verify(|ident: &Spanned<&str>| ident.0 == kw)
+            .verify_map(|Spanned(str, span)| {
+                if str == kw {
+                    Some(Spanned::new((), span))
+                } else {
+                    None
+                }
+            })
+            .context(StrContext::Expected(StrContextValue::StringLiteral(kw)))
             .parse_next(input)
     }
 }
 
 /// Parses the given symbol.
-fn symbol<'sym, 'i, S>(
-    symbol: &'sym Symbol,
-) -> Context<
-    impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym,
-    S,
-    Spanned<()>,
-    ContextError,
-    StrContext,
->
+fn symbol<'sym, 'i, S>(symbol: &'sym Symbol) -> impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
-    (move |input: &mut S| match input.next_token() {
-        Some(Spanned(Token::Symbol(ref the_symbol), span)) if the_symbol == symbol => {
-            Ok(Spanned::new((), span))
-        }
-        _ => Err(ErrMode::Backtrack(ContextError::new())),
-    })
-    .context(StrContext::Expected(symbol.str_context_value()))
+    move |input: &mut S| {
+        token
+            .verify_map(|Spanned(tok, span)| match tok {
+                Token::Symbol(sym) if sym == *symbol => Some(Spanned::new((), span)),
+                _ => None,
+            })
+            .context(StrContext::Expected(symbol.str_context_value()))
+            .parse_next(input)
+    }
 }
 
+/// Parses a newline.
+/// This can be either '\n' or ';'.
 fn newline<'i, S>(input: &mut S) -> PResult<Spanned<()>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
-    match input.next_token() {
-        Some(Spanned(Token::NewLine, span)) => Ok(Spanned::new((), span)),
-        _ => Err(ErrMode::Backtrack(ContextError::new())),
-    }
+    token
+        .verify_map(|Spanned(tok, span)| match tok {
+            Token::NewLine => Some(Spanned::new((), span)),
+            _ => None,
+        })
+        .parse_next(input)
 }
