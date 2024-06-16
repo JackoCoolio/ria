@@ -6,6 +6,7 @@ use std::{borrow::Borrow, ops::Range};
 use winnow::{
     ascii::{newline, space0},
     combinator::{alt, opt},
+    error::StrContextValue,
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::{one_of, take_while},
     Located, PResult, Parser,
@@ -195,6 +196,16 @@ macro_rules! symbols {
                     $str.value($sym)
                     $(, $strs.value($syms))*
                 )).parse_next(input)
+            }
+
+            /// Returns the StrContextValue for the Symbol.
+            pub const fn str_context_value(&self) -> winnow::error::StrContextValue {
+                use Symbol::*;
+
+                StrContextValue::StringLiteral(match (self) {
+                    $sym => $str
+                    $(, $syms => $strs)*
+                })
             }
         }
     };
