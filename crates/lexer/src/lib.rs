@@ -178,7 +178,7 @@ where
 }
 
 macro_rules! symbols {
-    ($str:literal => $sym:ident $(, $strs:literal => $syms:ident)*) => {
+    ($str:literal => $sym:ident $(, $strs:literal => $syms:ident)*,) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
         pub enum Symbol {
             $sym
@@ -216,7 +216,7 @@ symbols! {
     "->" => Arrow,
     "="  => Define,
     "("  => OpenParen,
-    ")"  => CloseParen
+    ")"  => CloseParen,
 }
 
 #[cfg(test)]
