@@ -7,7 +7,11 @@ use winnow::{
 
 use crate::{def::DefList, newline};
 
+use self::call::Call;
+
 use super::{ident, symbol};
+
+mod call;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr<'i> {
@@ -15,23 +19,6 @@ pub enum Expr<'i> {
     Lambda(Lambda<'i>),
     Block(Block<'i>),
     Call(Call<'i>),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Call<'i> {
-    func: Box<Expr<'i>>,
-    arg: Box<Expr<'i>>,
-}
-
-impl<'i> Call<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        let func = Expr::parse.map(Box::from).parse_next(input)?;
-        let arg = Expr::parse.map(Box::from).parse_next(input)?;
-        Ok(Call { func, arg })
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
