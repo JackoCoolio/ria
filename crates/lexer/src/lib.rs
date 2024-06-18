@@ -112,6 +112,7 @@ impl<T> From<(T, Range<usize>)> for Spanned<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token<'i> {
     NewLine,
+    Semi,
     Symbol(Symbol),
     Ident(&'i str),
 }
@@ -131,12 +132,19 @@ impl<'i> Token<'i> {
         parse_ident.map(Token::Ident).parse_next(input)
     }
 
+    fn parse_semi<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream + StreamIsPartial + Compare<char>,
+    {
+        ';'.value(Self::Semi).parse_next(input)
+    }
+
     fn parse_newline<S>(input: &mut S) -> PResult<Self>
     where
         S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<char>,
     {
         // lines can be separated with '\n' or ';'
-        alt((newline, ';')).value(Self::NewLine).parse_next(input)
+        newline.value(Self::NewLine).parse_next(input)
     }
 
     /// Parse a token.
@@ -147,7 +155,13 @@ impl<'i> Token<'i> {
             + Compare<&'static str>
             + Compare<char>,
     {
-        alt((Self::parse_kw, Self::parse_ident, Self::parse_newline)).parse_next(input)
+        alt((
+            Self::parse_kw,
+            Self::parse_ident,
+            Self::parse_newline,
+            Self::parse_semi,
+        ))
+        .parse_next(input)
     }
 }
 
