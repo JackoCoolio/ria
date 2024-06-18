@@ -18,6 +18,9 @@ fn main() {
     let source = std::fs::read_to_string(args.source_file).unwrap();
 
     let tokens = Lexer::new(&source).collect::<Box<_>>();
+
+    println!("lexed:\n{:?}", tokens);
+
     let ast = Expr::parse(&mut tokens.as_ref()).unwrap();
 
     println!("parsed:\n{:?}", ast);
