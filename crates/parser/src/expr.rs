@@ -1,17 +1,18 @@
 use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
-    combinator::{alt, cut_err, delimited, opt, preceded},
+    combinator::{alt, delimited, opt, preceded},
     stream::Stream,
     PResult, Parser,
 };
 
 use crate::{def::DefList, newline};
 
-use self::call::Call;
+use self::{call::Call, lambda::Lambda};
 
 use super::{ident, symbol};
 
 mod call;
+mod lambda;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr<'i> {
@@ -19,28 +20,6 @@ pub enum Expr<'i> {
     Lambda(Lambda<'i>),
     Block(Block<'i>),
     Call(Call<'i>),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Lambda<'i> {
-    param: Spanned<&'i str>,
-    body: Box<Expr<'i>>,
-}
-
-impl<'i> Lambda<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        let _ = symbol(&Symbol::Lambda).parse_next(input)?;
-        let param = cut_err(ident).parse_next(input)?;
-        let _ = symbol(&Symbol::Arrow).parse_next(input)?;
-        let body = Expr::parse.parse_next(input)?;
-        Ok(Self {
-            param,
-            body: Box::new(body),
-        })
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
