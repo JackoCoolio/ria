@@ -40,6 +40,22 @@ pub struct Lambda<'i> {
     body: Box<Expr<'i>>,
 }
 
+impl<'i> Lambda<'i> {
+    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream<Token = Spanned<Token<'i>>>,
+    {
+        let _ = symbol(&Symbol::Lambda).parse_next(input)?;
+        let param = cut_err(ident).parse_next(input)?;
+        let _ = symbol(&Symbol::Arrow).parse_next(input)?;
+        let body = Expr::parse.parse_next(input)?;
+        Ok(Self {
+            param,
+            body: Box::new(body),
+        })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Block<'i> {
     defs: DefList<'i>,
@@ -74,7 +90,7 @@ impl<'i> Expr<'i> {
     {
         let mut expr = alt((
             ident.map(Expr::Variable),
-            Expr::parse_lambda.map(Expr::Lambda),
+            Lambda::parse.map(Expr::Lambda),
             Block::parse.map(Expr::Block),
         ));
 
@@ -97,21 +113,6 @@ impl<'i> Expr<'i> {
 
             // loop to see if we call again
         }
-    }
-
-    /// Parses a [Lambda].
-    fn parse_lambda<S>(input: &mut S) -> PResult<Lambda<'i>>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        let _ = symbol(&Symbol::Lambda).parse_next(input)?;
-        let param = cut_err(ident).parse_next(input)?;
-        let _ = symbol(&Symbol::Arrow).parse_next(input)?;
-        let body = Expr::parse.parse_next(input)?;
-        Ok(Lambda {
-            param,
-            body: Box::new(body),
-        })
     }
 }
 
