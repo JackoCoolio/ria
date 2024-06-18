@@ -14,6 +14,24 @@ pub enum Expr<'i> {
     Variable(Spanned<&'i str>),
     Lambda(Lambda<'i>),
     Block(Block<'i>),
+    Call(Call<'i>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Call<'i> {
+    func: Box<Expr<'i>>,
+    arg: Box<Expr<'i>>,
+}
+
+impl<'i> Call<'i> {
+    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    where
+        S: Stream<Token = Spanned<Token<'i>>>,
+    {
+        let func = Expr::parse.map(Box::from).parse_next(input)?;
+        let arg = Expr::parse.map(Box::from).parse_next(input)?;
+        Ok(Call { func, arg })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -54,12 +72,31 @@ impl<'i> Expr<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        alt((
+        let mut expr = alt((
             ident.map(Expr::Variable),
             Expr::parse_lambda.map(Expr::Lambda),
             Block::parse.map(Expr::Block),
-        ))
-        .parse_next(input)
+        ));
+
+        // parse first expression
+        let mut lhs = expr.parse_next(input)?;
+
+        loop {
+            // try to parse another expression
+            let Ok(rhs) = expr.parse_next(input) else {
+                // if we couldn't, just return what we have
+                return Ok(lhs);
+            };
+
+            // we parsed another expression, so we must be calling `lhs` with
+            // an argument of `rhs`
+            lhs = Expr::Call(Call {
+                func: lhs.into(),
+                arg: rhs.into(),
+            });
+
+            // loop to see if we call again
+        }
     }
 
     /// Parses a [Lambda].
@@ -85,7 +122,7 @@ mod test {
 
     use crate::{
         def::{Def, DefList},
-        expr::{Block, Expr, Lambda},
+        expr::{Block, Call, Expr, Lambda},
     };
 
     #[test]
@@ -140,6 +177,42 @@ mod test {
                     .into(),
                 },
                 expr: Some(Expr::Variable(Spanned("x", 8..9)).into()),
+            }),
+        );
+    }
+
+    #[test]
+    fn parse_arity_1_call() {
+        let tokens: Box<_> = Lexer::new("x y").collect();
+        let expr = Expr::parse
+            .parse(tokens.as_ref())
+            .expect("call should parse");
+
+        assert_eq!(
+            expr,
+            Expr::Call(Call {
+                func: Expr::Variable(Spanned("x", 0..1)).into(),
+                arg: Expr::Variable(Spanned("y", 2..3)).into(),
+            })
+        );
+    }
+
+    #[test]
+    fn parse_arity_2_call() {
+        let tokens: Box<_> = Lexer::new("x y z").collect();
+        let expr = Expr::parse
+            .parse(tokens.as_ref())
+            .expect("call should parse");
+
+        assert_eq!(
+            expr,
+            Expr::Call(Call {
+                func: Expr::Call(Call {
+                    func: Expr::Variable(Spanned("x", 0..1)).into(),
+                    arg: Expr::Variable(Spanned("y", 2..3)).into(),
+                })
+                .into(),
+                arg: Expr::Variable(Spanned("z", 4..5)).into(),
             }),
         );
     }
