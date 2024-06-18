@@ -1,0 +1,9 @@
+[package]
+name = "ria_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.7", features = ["derive"] }
+ria_lexer = { path = "../lexer" }
+ria_parser = { path = "../parser" }
