@@ -1,13 +1,17 @@
-use ria_lexer::{Spanned, Symbol, Token};
+use ria_lexer::{Spanned, Token};
 use winnow::{
-    combinator::{alt, cut_err, delimited, opt, preceded},
+    combinator::alt,
     stream::Stream,
     PResult, Parser,
 };
 
-use crate::{def::DefList, newline};
+use self::{block::Block, call::Call, lambda::Lambda};
 
-use super::{ident, symbol};
+use super::ident;
+
+mod block;
+mod call;
+mod lambda;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr<'i> {
@@ -15,72 +19,6 @@ pub enum Expr<'i> {
     Lambda(Lambda<'i>),
     Block(Block<'i>),
     Call(Call<'i>),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Call<'i> {
-    func: Box<Expr<'i>>,
-    arg: Box<Expr<'i>>,
-}
-
-impl<'i> Call<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        let func = Expr::parse.map(Box::from).parse_next(input)?;
-        let arg = Expr::parse.map(Box::from).parse_next(input)?;
-        Ok(Call { func, arg })
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Lambda<'i> {
-    param: Spanned<&'i str>,
-    body: Box<Expr<'i>>,
-}
-
-impl<'i> Lambda<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        let _ = symbol(&Symbol::Lambda).parse_next(input)?;
-        let param = cut_err(ident).parse_next(input)?;
-        let _ = symbol(&Symbol::Arrow).parse_next(input)?;
-        let body = Expr::parse.parse_next(input)?;
-        Ok(Self {
-            param,
-            body: Box::new(body),
-        })
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Block<'i> {
-    defs: DefList<'i>,
-    expr: Option<Box<Expr<'i>>>,
-}
-
-impl<'i> Block<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
-    where
-        S: Stream<Token = Spanned<Token<'i>>>,
-    {
-        delimited(
-            symbol(&Symbol::OpenParen),
-            |input: &mut S| {
-                let defs = DefList::parse.parse_next(input)?;
-                let expr = opt(preceded(newline, Expr::parse))
-                    .map(|expr| expr.map(Box::from))
-                    .parse_next(input)?;
-
-                Ok(Block { defs, expr })
-            },
-            symbol(&Symbol::CloseParen),
-        )
-        .parse_next(input)
-    }
 }
 
 impl<'i> Expr<'i> {
