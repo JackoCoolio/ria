@@ -17,11 +17,13 @@ fn main() {
 
     let source = std::fs::read_to_string(args.source_file).unwrap();
 
+    println!("source:\n```\n{}\n```\n", source);
+
     let tokens = Lexer::new(&source).collect::<Box<_>>();
 
-    println!("lexed:\n{:?}", tokens);
+    println!("lexed:\n{:?}\n", tokens);
 
     let ast = Expr::parse(&mut tokens.as_ref()).unwrap();
 
-    println!("parsed:\n{:?}", ast);
+    println!("parsed:\n{:?}\n", ast);
 }
