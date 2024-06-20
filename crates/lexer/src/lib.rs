@@ -4,8 +4,8 @@
 use std::{borrow::Borrow, ops::Range};
 
 use winnow::{
-    ascii::{newline, space0},
-    combinator::{alt, opt},
+    ascii::newline,
+    combinator::{alt, repeat},
     error::StrContextValue,
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::{one_of, take_while},
@@ -15,18 +15,40 @@ use winnow::{
 #[derive(Debug, Clone)]
 pub struct Lexer<'i> {
     remaining: Located<&'i str>,
-    last_was_newline: bool,
 }
 
 impl<'i> Lexer<'i> {
-    pub fn new(mut input: &'i str) -> Self {
-        // parse any leading spaces
-        let _ = space0::<_, ()>.parse_next(&mut input);
-
+    pub fn new(input: &'i str) -> Self {
         Self {
             remaining: Located::new(input),
-            // there might have been a leading newline, but we don't really care
-            last_was_newline: false,
+        }
+    }
+}
+
+impl<'i> Lexer<'i> {
+    fn eat_whitespace(&mut self) -> Option<Spanned<Token<'i>>> {
+        let mut first_newline = None;
+
+        loop {
+            let _ = repeat::<_, _, Vec<_>, (), _>(0.., one_of((' ', '\t', '\r')))
+                .parse_next(&mut self.remaining);
+
+            let checkpoint = self.remaining;
+            match Token::parse
+                .with_span()
+                .parse_next(&mut self.remaining)
+                .map(Spanned::from)
+            {
+                Ok(spanned_tok @ Spanned(Token::NewLine | Token::Semi, _)) => {
+                    if first_newline.is_none() {
+                        first_newline = Some(spanned_tok);
+                    }
+                }
+                _ => {
+                    self.remaining = checkpoint;
+                    return first_newline;
+                }
+            }
         }
     }
 }
@@ -35,23 +57,15 @@ impl<'i> Iterator for Lexer<'i> {
     type Item = Spanned<Token<'i>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let ((token, span), _) = (Token::parse.with_span(), opt(one_of((' ', '\t', '\r'))))
+        if let Some(newline) = self.eat_whitespace() {
+            return Some(newline);
+        };
+
+        Token::parse
+            .with_span()
+            .map(Spanned::from)
             .parse_next(&mut self.remaining)
-            .ok()?;
-
-        // we return the first occurrence of a newline, then subsequent
-        // occurrences are skipped
-        if let Token::NewLine = token {
-            if self.last_was_newline {
-                return self.next();
-            } else {
-                self.last_was_newline = true;
-            }
-        } else {
-            self.last_was_newline = false;
-        }
-
-        Some(Spanned::from((token, span)))
+            .ok()
     }
 }
 
@@ -304,5 +318,11 @@ mod test {
 
         // define
         assert_matches!(Symbol::parse.parse_peek("="), Ok((_, Symbol::Define)));
+    }
+
+    #[test]
+    fn parse_newlines() {
+        let tokens: Box<_> = Lexer::new("x\n  y").collect();
+        assert_eq!(tokens.len(), 3);
     }
 }

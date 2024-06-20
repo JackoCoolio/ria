@@ -71,15 +71,32 @@ where
     }
 }
 
-/// Parses a newline.
-/// This can be either '\n' or ';'.
+fn maybe_newline<'i, S>(input: &mut S) -> Option<Spanned<()>>
+where
+    S: Stream<Token = Spanned<Token<'i>>>,
+{
+    match newline.parse_next(input) {
+        Ok(x) => Some(x.map(|_| ())),
+        _ => None,
+    }
+}
+
+#[test]
+fn test_allow_newline() {
+    let mut tokens = [Spanned(Token::NewLine, 0..0)].as_slice();
+    maybe_newline(&mut tokens).expect("should eat a newline");
+
+    let mut tokens = [Spanned(Token::Ident("foo"), 0..0)].as_slice();
+    assert!(maybe_newline(&mut tokens).is_none());
+}
+
 fn newline<'i, S>(input: &mut S) -> PResult<Spanned<()>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
     token
         .verify_map(|Spanned(tok, span)| match tok {
-            Token::NewLine => Some(Spanned::new((), span)),
+            Token::NewLine | Token::Semi => Some(Spanned::new((), span)),
             _ => None,
         })
         .parse_next(input)

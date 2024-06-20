@@ -1,7 +1,7 @@
 use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{combinator::cut_err, stream::Stream, PResult, Parser};
 
-use crate::{ident, symbol};
+use crate::{ident, maybe_newline, symbol};
 
 use super::Expr;
 
@@ -18,7 +18,9 @@ impl<'i> Lambda<'i> {
     {
         let _ = symbol(&Symbol::Lambda).parse_next(input)?;
         let param = cut_err(ident).parse_next(input)?;
+        maybe_newline(input);
         let _ = symbol(&Symbol::Arrow).parse_next(input)?;
+        maybe_newline(input);
         let body = Expr::parse.parse_next(input)?;
         Ok(Self {
             param,
