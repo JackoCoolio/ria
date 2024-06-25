@@ -51,8 +51,8 @@ mod test {
     use super::DefList;
 
     macro_rules! assert_def_eq {
-        ($def:expr, $ident:literal = $pat:pat) => {{
-            assert_eq!(*$def.ident.inner(), $ident);
+        ($def:expr, $ident:ident = $pat:pat) => {{
+            assert_eq!(*$def.ident.inner(), stringify!($ident));
             assert!(matches!($def.expr, $pat));
         }};
     }
@@ -65,7 +65,7 @@ mod test {
 
         let def = Def::parse.parse(tokens.as_ref()).unwrap();
 
-        assert_def_eq!(def, "x" = Expr::Variable(Spanned("y", _)));
+        assert_def_eq!(def, x = Expr::Variable(Spanned("y", _)));
     }
 
     #[test]
@@ -76,7 +76,7 @@ mod test {
 
         let def_list = DefList::parse.parse(tokens.as_ref()).unwrap();
 
-        assert_def_eq!(&def_list.defs[0], "x" = Expr::Variable(Spanned("y", _)));
-        assert_def_eq!(&def_list.defs[1], "y" = Expr::Variable(Spanned("z", _)));
+        assert_def_eq!(&def_list.defs[0], x = Expr::Variable(Spanned("y", _)));
+        assert_def_eq!(&def_list.defs[1], y = Expr::Variable(Spanned("z", _)));
     }
 }
