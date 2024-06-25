@@ -4,6 +4,7 @@ use ria_lexer::{Lexer, Spanned, Token};
 use ria_parser::{expr::Expr, module::Module};
 use winnow::{
     stream::{Stream, StreamIsPartial},
+    token::any,
     Parser,
 };
 
@@ -28,7 +29,7 @@ where
     S: Stream<Token = Spanned<Token<'i>>> + Clone + StreamIsPartial + Sized,
 {
     match parser.to_lowercase().as_str() {
-        "expr" => Expr::parse
+        "expr" => (Expr::parse, any)
             .parse(tokens)
             .map(|expr| format!("{expr:?}"))
             .map_err(|e| format!("{e:?}")),
