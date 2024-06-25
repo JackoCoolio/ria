@@ -57,6 +57,7 @@ where
 }
 
 /// Parses the given symbol.
+/// Also adds context that the symbol was expected.
 fn symbol<'sym, 'i, S>(symbol: &'sym Symbol) -> impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym
 where
     S: Stream<Token = Spanned<Token<'i>>>,
@@ -100,5 +101,8 @@ where
             Token::NewLine | Token::Semi => Some(Spanned::new((), span)),
             _ => None,
         })
+        .context(StrContext::Expected(StrContextValue::Description(
+            "a newline",
+        )))
         .parse_next(input)
 }
