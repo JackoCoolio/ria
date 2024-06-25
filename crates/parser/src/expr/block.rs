@@ -1,11 +1,7 @@
 use ria_lexer::{Spanned, Symbol, Token};
-use winnow::{
-    combinator::{delimited, opt, preceded},
-    stream::Stream,
-    PResult, Parser,
-};
+use winnow::{combinator::opt, stream::Stream, PResult, Parser};
 
-use crate::{def::DefList, newline, symbol};
+use crate::{def::DefList, maybe_newline, newline, symbol};
 
 use super::Expr;
 
@@ -20,18 +16,20 @@ impl<'i> Block<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        delimited(
-            symbol(&Symbol::OpenParen),
-            |input: &mut S| {
-                let defs = DefList::parse.parse_next(input)?;
-                let expr = opt(preceded(newline, Expr::parse))
-                    .map(|expr| expr.map(Box::from))
-                    .parse_next(input)?;
+        symbol(&Symbol::OpenParen).parse_next(input)?;
+        maybe_newline(input);
 
-                Ok(Block { defs, expr })
-            },
-            symbol(&Symbol::CloseParen),
-        )
-        .parse_next(input)
+        let defs = DefList::parse.parse_next(input)?;
+
+        newline(input)?;
+
+        let expr = opt(Expr::parse)
+            .map(|expr| expr.map(Box::from))
+            .parse_next(input)?;
+        maybe_newline(input);
+
+        symbol(&Symbol::CloseParen).parse_next(input)?;
+
+        Ok(Block { defs, expr })
     }
 }
