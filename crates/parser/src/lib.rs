@@ -9,6 +9,7 @@ use winnow::{
 
 pub mod def;
 pub mod expr;
+pub mod module;
 
 /// Parses any token.
 fn token<'i, S>(input: &mut S) -> PResult<Spanned<Token<'i>>>

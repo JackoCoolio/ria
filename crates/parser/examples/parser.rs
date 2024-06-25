@@ -1,7 +1,7 @@
 use std::{env::args, error::Error};
 
 use ria_lexer::{Lexer, Spanned, Token};
-use ria_parser::expr::Expr;
+use ria_parser::{expr::Expr, module::Module};
 use winnow::{
     stream::{Stream, StreamIsPartial},
     Parser,
@@ -31,6 +31,10 @@ where
         "expr" => Expr::parse
             .parse(tokens)
             .map(|expr| format!("{expr:?}"))
+            .map_err(|e| format!("{e:?}")),
+        "mod" => Module::parse
+            .parse(tokens)
+            .map(|module| format!("{module:?}"))
             .map_err(|e| format!("{e:?}")),
         _ => unimplemented!(),
     }
