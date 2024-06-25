@@ -1,6 +1,7 @@
 use ria_lexer::{Spanned, Token};
 use winnow::{
-    combinator::alt,
+    combinator::{alt, trace},
+    error::{StrContext, StrContextValue},
     stream::Stream,
     PResult, Parser,
 };
@@ -26,11 +27,21 @@ impl<'i> Expr<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let mut expr = alt((
-            ident.map(Expr::Variable),
-            Lambda::parse.map(Expr::Lambda),
-            Block::parse.map(Expr::Block),
-        ));
+        let mut expr = trace(
+            "expression alt",
+            alt((
+                ident
+                    .map(Expr::Variable)
+                    .context(StrContext::Label("variable")),
+                Lambda::parse
+                    .map(Expr::Lambda)
+                    .context(StrContext::Label("lambda")),
+                Block::parse
+                    .map(Expr::Block)
+                    .context(StrContext::Label("block")),
+            )),
+        )
+        .context(StrContext::Label("expression"));
 
         // parse first expression
         let mut lhs = expr.parse_next(input)?;

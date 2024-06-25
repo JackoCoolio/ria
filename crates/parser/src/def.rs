@@ -1,5 +1,10 @@
 use ria_lexer::{Spanned, Symbol, Token};
-use winnow::{combinator::separated, stream::Stream, PResult, Parser};
+use winnow::{
+    combinator::separated,
+    error::{StrContext, StrContextValue},
+    stream::Stream,
+    PResult, Parser,
+};
 
 use crate::newline;
 
@@ -15,7 +20,9 @@ impl<'i> DefList<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let defs: Vec<_> = separated(1.., Def::parse, newline).parse_next(input)?;
+        let defs: Vec<_> = separated(0.., Def::parse, newline)
+            .context(StrContext::Label("def list"))
+            .parse_next(input)?;
         Ok(DefList {
             defs: defs.into_boxed_slice(),
         })
@@ -33,9 +40,15 @@ impl<'i> Def<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let ident = ident.parse_next(input)?;
-        let _ = symbol(&Symbol::Define).parse_next(input)?;
-        let expr = Expr::parse.parse_next(input)?;
+        let ident = ident
+            .context(StrContext::Label("identifier"))
+            .parse_next(input)?;
+        symbol(&Symbol::Define).parse_next(input)?;
+        let expr = Expr::parse
+            .context(StrContext::Expected(StrContextValue::Description(
+                "an expression",
+            )))
+            .parse_next(input)?;
 
         Ok(Self { ident, expr })
     }

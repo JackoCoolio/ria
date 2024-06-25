@@ -5,7 +5,7 @@ use std::{borrow::Borrow, ops::Range};
 
 use winnow::{
     ascii::newline,
-    combinator::{alt, repeat},
+    combinator::{alt, repeat, trace},
     error::StrContextValue,
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::{one_of, take_while},
@@ -30,11 +30,14 @@ impl<'i> Lexer<'i> {
         let mut first_newline = None;
 
         loop {
-            let _ = repeat::<_, _, Vec<_>, (), _>(0.., one_of((' ', '\t', '\r')))
-                .parse_next(&mut self.remaining);
+            let _ = trace(
+                "ria::whitespace",
+                repeat::<_, _, Vec<_>, (), _>(0.., one_of((' ', '\t', '\r'))),
+            )
+            .parse_next(&mut self.remaining);
 
             let checkpoint = self.remaining;
-            match Token::parse
+            match trace("ria::Token", Token::parse)
                 .with_span()
                 .parse_next(&mut self.remaining)
                 .map(Spanned::from)
@@ -136,21 +139,27 @@ impl<'i> Token<'i> {
     where
         S: Stream + StreamIsPartial + Compare<&'static str>,
     {
-        Symbol::parse.map(Token::Symbol).parse_next(input)
+        trace("ria::parse_kw", Symbol::parse)
+            .map(Token::Symbol)
+            .parse_next(input)
     }
 
     fn parse_ident<S>(input: &mut S) -> PResult<Self>
     where
         S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<&'static str>,
     {
-        parse_ident.map(Token::Ident).parse_next(input)
+        trace("ria::parse_ident", parse_ident)
+            .map(Token::Ident)
+            .parse_next(input)
     }
 
     fn parse_semi<S>(input: &mut S) -> PResult<Self>
     where
         S: Stream + StreamIsPartial + Compare<char>,
     {
-        ';'.value(Self::Semi).parse_next(input)
+        trace("ria::parse_semi", ';')
+            .value(Self::Semi)
+            .parse_next(input)
     }
 
     fn parse_newline<S>(input: &mut S) -> PResult<Self>
@@ -158,7 +167,9 @@ impl<'i> Token<'i> {
         S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<char>,
     {
         // lines can be separated with '\n' or ';'
-        newline.value(Self::NewLine).parse_next(input)
+        trace("ria::parse_newline", newline)
+            .value(Self::NewLine)
+            .parse_next(input)
     }
 
     /// Parse a token.
@@ -169,12 +180,15 @@ impl<'i> Token<'i> {
             + Compare<&'static str>
             + Compare<char>,
     {
-        alt((
-            Self::parse_kw,
-            Self::parse_ident,
-            Self::parse_newline,
-            Self::parse_semi,
-        ))
+        trace(
+            "ria::Token",
+            alt((
+                Self::parse_kw,
+                Self::parse_ident,
+                Self::parse_newline,
+                Self::parse_semi,
+            )),
+        )
         .parse_next(input)
     }
 }
@@ -221,8 +235,8 @@ macro_rules! symbols {
                 use Symbol::*;
 
                 winnow::combinator::alt((
-                    $str.value($sym)
-                    $(, $strs.value($syms))*
+                    winnow::combinator::trace(concat!("ria::Symbol::", stringify!($sym)), $str.value($sym))
+                    $(, winnow::combinator::trace(concat!("ria::Symbol::", stringify!($syms)), $strs.value($syms)))*
                 )).parse_next(input)
             }
 

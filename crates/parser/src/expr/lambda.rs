@@ -1,5 +1,10 @@
 use ria_lexer::{Spanned, Symbol, Token};
-use winnow::{combinator::cut_err, stream::Stream, PResult, Parser};
+use winnow::{
+    combinator::cut_err,
+    error::{StrContext, StrContextValue},
+    stream::Stream,
+    PResult, Parser,
+};
 
 use crate::{ident, maybe_newline, symbol};
 
@@ -21,7 +26,11 @@ impl<'i> Lambda<'i> {
         maybe_newline(input);
         let _ = symbol(&Symbol::Arrow).parse_next(input)?;
         maybe_newline(input);
-        let body = Expr::parse.parse_next(input)?;
+        let body = Expr::parse
+            .context(StrContext::Expected(StrContextValue::Description(
+                "an expression",
+            )))
+            .parse_next(input)?;
         Ok(Self {
             param,
             body: Box::new(body),

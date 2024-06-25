@@ -1,5 +1,9 @@
 use ria_lexer::{Spanned, Token};
-use winnow::{stream::Stream, PResult, Parser};
+use winnow::{
+    error::{StrContext, StrContextValue},
+    stream::Stream,
+    PResult, Parser,
+};
 
 use super::Expr;
 
@@ -14,8 +18,18 @@ impl<'i> Call<'i> {
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
-        let func = Expr::parse.map(Box::from).parse_next(input)?;
-        let arg = Expr::parse.map(Box::from).parse_next(input)?;
+        let func = Expr::parse
+            .context(StrContext::Expected(StrContextValue::Description(
+                "a function",
+            )))
+            .map(Box::from)
+            .parse_next(input)?;
+        let arg = Expr::parse
+            .context(StrContext::Expected(StrContextValue::Description(
+                "an argument",
+            )))
+            .map(Box::from)
+            .parse_next(input)?;
         Ok(Call { func, arg })
     }
 }
