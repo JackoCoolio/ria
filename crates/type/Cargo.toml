@@ -1,0 +1,8 @@
+[package]
+name = "ria_type"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+polytype = "7.0.1"
+ria_parser = { path = "../parser" }
