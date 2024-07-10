@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use ria_lexer::Lexer;
-use ria_parser::expr::Expr;
+use ria_parser::def::DefList;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -23,7 +23,7 @@ fn main() {
 
     println!("lexed:\n{:?}\n", tokens);
 
-    let ast = Expr::parse(&mut tokens.as_ref()).unwrap();
+    let ast = DefList::parse(&mut tokens.as_ref()).unwrap();
 
     println!("parsed:\n{:?}\n", ast);
 }
