@@ -3,7 +3,7 @@ use winnow::{
     combinator::separated,
     error::{StrContext, StrContextValue},
     stream::Stream,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 use crate::newline;
@@ -16,7 +16,7 @@ pub struct DefList<'i> {
 }
 
 impl<'i> DefList<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<DefList<'i>>
+    pub fn parse<S>(input: &mut S) -> ModalResult<DefList<'i>>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
@@ -31,12 +31,14 @@ impl<'i> DefList<'i> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Def<'i> {
+    /// The identifier that is being assigned to.
     pub ident: Spanned<&'i str>,
+    /// The value that is assigned to `ident`.
     pub expr: Expr<'i>,
 }
 
 impl<'i> Def<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Def<'i>>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Def<'i>>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {

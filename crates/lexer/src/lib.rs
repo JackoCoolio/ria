@@ -1,6 +1,3 @@
-#![feature(assert_matches)]
-#![allow(dead_code)]
-
 use std::{borrow::Borrow, ops::Range};
 
 use winnow::{
@@ -9,18 +6,18 @@ use winnow::{
     error::StrContextValue,
     stream::{AsChar, Compare, Location, Stream, StreamIsPartial},
     token::{one_of, take_while},
-    Located, PResult, Parser,
+    LocatingSlice, ModalResult, Parser,
 };
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'i> {
-    remaining: Located<&'i str>,
+    remaining: LocatingSlice<&'i str>,
 }
 
 impl<'i> Lexer<'i> {
     pub fn new(input: &'i str) -> Self {
         Self {
-            remaining: Located::new(input),
+            remaining: LocatingSlice::new(input),
         }
     }
 }
@@ -135,7 +132,7 @@ pub enum Token<'i> {
 }
 
 impl<'i> Token<'i> {
-    fn parse_kw<S>(input: &mut S) -> PResult<Self>
+    fn parse_kw<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream + StreamIsPartial + Compare<&'static str>,
     {
@@ -144,7 +141,7 @@ impl<'i> Token<'i> {
             .parse_next(input)
     }
 
-    fn parse_ident<S>(input: &mut S) -> PResult<Self>
+    fn parse_ident<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<&'static str>,
     {
@@ -153,7 +150,7 @@ impl<'i> Token<'i> {
             .parse_next(input)
     }
 
-    fn parse_semi<S>(input: &mut S) -> PResult<Self>
+    fn parse_semi<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream + StreamIsPartial + Compare<char>,
     {
@@ -162,7 +159,7 @@ impl<'i> Token<'i> {
             .parse_next(input)
     }
 
-    fn parse_newline<S>(input: &mut S) -> PResult<Self>
+    fn parse_newline<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = char, Slice = &'i str> + StreamIsPartial + Compare<char>,
     {
@@ -173,7 +170,7 @@ impl<'i> Token<'i> {
     }
 
     /// Parse a token.
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = char, Slice = &'i str>
             + StreamIsPartial
@@ -201,7 +198,7 @@ fn is_ident_rest(c: char) -> bool {
     is_ident_first(c) || c.is_dec_digit()
 }
 
-fn take_ident<S>() -> impl FnMut(&mut S) -> PResult<()>
+fn take_ident<S>() -> impl FnMut(&mut S) -> ModalResult<()>
 where
     S: Stream<Token = char> + StreamIsPartial,
 {
@@ -212,11 +209,11 @@ where
     }
 }
 
-fn parse_ident<'i, S>(input: &mut S) -> PResult<&'i str>
+fn parse_ident<'i, S>(input: &mut S) -> ModalResult<&'i str>
 where
     S: Stream<Token = char, Slice = &'i str> + StreamIsPartial,
 {
-    take_ident().recognize().parse_next(input)
+    take_ident().take().parse_next(input)
 }
 
 macro_rules! symbols {
@@ -228,7 +225,7 @@ macro_rules! symbols {
         }
 
         impl Symbol {
-            pub fn parse<S>(input: &mut S) -> PResult<Self>
+            pub fn parse<S>(input: &mut S) -> ModalResult<Self>
             where
                 S: Stream + Compare<&'static str> + StreamIsPartial,
             {
@@ -263,8 +260,6 @@ symbols! {
 
 #[cfg(test)]
 mod test {
-    use std::assert_matches::assert_matches;
-
     use winnow::Parser;
 
     use super::{parse_ident, Lexer, Symbol, Token};
@@ -311,9 +306,12 @@ mod test {
         // just underscore is Ok
         works("_");
 
-        // starts with underscore is Ok
+        // starts/ends with underscore is Ok
         works("_a");
         works("_1");
+        works("a_");
+        works("__");
+        works("_a_");
 
         // starts with alpha is Ok
         works("foo");
@@ -325,13 +323,19 @@ mod test {
     #[test]
     fn parse_symbols() {
         // lambda
-        assert_matches!(Symbol::parse.parse_peek("\\"), Ok((_, Symbol::Lambda)));
+        assert!(Symbol::parse
+            .parse_peek("\\")
+            .is_ok_and(|(_, x)| x == Symbol::Lambda));
 
         // arrow
-        assert_matches!(Symbol::parse.parse_peek("->"), Ok((_, Symbol::Arrow)));
+        assert!(Symbol::parse
+            .parse_peek("->")
+            .is_ok_and(|(_, x)| x == Symbol::Arrow));
 
         // define
-        assert_matches!(Symbol::parse.parse_peek("="), Ok((_, Symbol::Define)));
+        assert!(Symbol::parse
+            .parse_peek("=")
+            .is_ok_and(|(_, x)| x == Symbol::Define));
     }
 
     #[test]

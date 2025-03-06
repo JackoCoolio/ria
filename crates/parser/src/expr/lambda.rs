@@ -3,7 +3,7 @@ use winnow::{
     combinator::cut_err,
     error::{StrContext, StrContextValue},
     stream::Stream,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 use crate::{ident, maybe_newline, symbol};
@@ -17,7 +17,7 @@ pub struct Lambda<'i> {
 }
 
 impl<'i> Lambda<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {

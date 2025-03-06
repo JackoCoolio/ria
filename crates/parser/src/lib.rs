@@ -4,7 +4,7 @@ use ria_lexer::{Spanned, Symbol, Token};
 use winnow::{
     error::{ContextError, ErrMode, StrContext, StrContextValue},
     stream::Stream,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 pub mod def;
@@ -12,7 +12,7 @@ pub mod expr;
 pub mod module;
 
 /// Parses any token.
-fn token<'i, S>(input: &mut S) -> PResult<Spanned<Token<'i>>>
+fn token<'i, S>(input: &mut S) -> ModalResult<Spanned<Token<'i>>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
@@ -22,7 +22,7 @@ where
 }
 
 /// Parses any identifier.
-fn ident<'i, S>(input: &mut S) -> PResult<Spanned<&'i str>>
+fn ident<'i, S>(input: &mut S) -> ModalResult<Spanned<&'i str>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
@@ -38,7 +38,7 @@ where
 }
 
 /// Parse the given keyword.
-fn keyword<'i, S>(kw: &'static str) -> impl FnMut(&mut S) -> PResult<Spanned<()>>
+fn keyword<'i, S>(kw: &'static str) -> impl FnMut(&mut S) -> ModalResult<Spanned<()>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
@@ -58,7 +58,9 @@ where
 
 /// Parses the given symbol.
 /// Also adds context that the symbol was expected.
-fn symbol<'sym, 'i, S>(symbol: &'sym Symbol) -> impl FnMut(&mut S) -> PResult<Spanned<()>> + 'sym
+fn symbol<'sym, 'i, S>(
+    symbol: &'sym Symbol,
+) -> impl FnMut(&mut S) -> ModalResult<Spanned<()>> + 'sym
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {
@@ -92,7 +94,7 @@ fn test_allow_newline() {
     assert!(maybe_newline(&mut tokens).is_none());
 }
 
-fn newline<'i, S>(input: &mut S) -> PResult<Spanned<()>>
+fn newline<'i, S>(input: &mut S) -> ModalResult<Spanned<()>>
 where
     S: Stream<Token = Spanned<Token<'i>>>,
 {

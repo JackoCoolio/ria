@@ -2,7 +2,7 @@ use ria_lexer::{Spanned, Token};
 use winnow::{
     error::{StrContext, StrContextValue},
     stream::Stream,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 use super::Expr;
@@ -14,7 +14,7 @@ pub struct Call<'i> {
 }
 
 impl<'i> Call<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {

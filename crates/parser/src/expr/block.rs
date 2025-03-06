@@ -1,5 +1,5 @@
 use ria_lexer::{Spanned, Symbol, Token};
-use winnow::{combinator::opt, stream::Stream, PResult, Parser};
+use winnow::{combinator::opt, stream::Stream, ModalResult, Parser};
 
 use crate::{def::DefList, maybe_newline, newline, symbol};
 
@@ -12,7 +12,7 @@ pub struct Block<'i> {
 }
 
 impl<'i> Block<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Self>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Self>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {

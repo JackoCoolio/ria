@@ -1,9 +1,9 @@
 use ria_lexer::{Spanned, Token};
 use winnow::{
     combinator::{alt, trace},
-    error::{StrContext, StrContextValue},
+    error::StrContext,
     stream::Stream,
-    PResult, Parser,
+    ModalResult, Parser,
 };
 
 use self::{block::Block, call::Call, lambda::Lambda};
@@ -23,7 +23,7 @@ pub enum Expr<'i> {
 }
 
 impl<'i> Expr<'i> {
-    pub fn parse<S>(input: &mut S) -> PResult<Expr<'i>>
+    pub fn parse<S>(input: &mut S) -> ModalResult<Expr<'i>>
     where
         S: Stream<Token = Spanned<Token<'i>>>,
     {
